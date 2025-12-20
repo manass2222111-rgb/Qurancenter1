@@ -9,20 +9,50 @@ const App: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = async () => {
+    try {
       setIsLoading(true);
+      setError(null);
       const data = await fetchSheetData();
       setStudents(data);
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ غير متوقع أثناء تحميل البيانات.');
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-red-100">
+          <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+            ⚠️
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">تعذر تحميل البيانات</h2>
+          <p className="text-gray-600 mb-6 leading-relaxed">{error}</p>
+          <div className="space-y-3">
+            <button 
+              onClick={loadData}
+              className="w-full py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-lg shadow-teal-100"
+            >
+              إعادة المحاولة
+            </button>
+            <p className="text-xs text-gray-400">تأكد من أن ملف جوجل شيت "عام" (Public) وأن الرابط صحيح.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
-      {/* Sidebar / Sidebar Navigation for Desktop */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
@@ -70,12 +100,11 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-96">
             <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-teal-700 font-bold animate-pulse">جاري تحميل البيانات...</p>
+            <p className="mt-4 text-teal-700 font-bold animate-pulse">جاري تحميل البيانات من جوجل...</p>
           </div>
         ) : (
           <>
@@ -98,7 +127,7 @@ const App: React.FC = () => {
               <div className="bg-white p-12 rounded-3xl border border-dashed border-gray-300 text-center flex flex-col items-center justify-center gap-4">
                  <div className="text-6xl">🚧</div>
                  <h3 className="text-xl font-bold">نموذج الإضافة قيد التطوير</h3>
-                 <p className="text-gray-500 max-w-md">سيتم ربط هذا النموذج بـ Google App Script في الخطوة القادمة لتحديث الجدول مباشرة.</p>
+                 <p className="text-gray-500 max-w-md">سيتم ربط هذا النموذج بـ Google App Script لتحديث الجدول مباشرة.</p>
                  <button 
                   onClick={() => setActiveView('table')}
                   className="mt-4 px-6 py-2 bg-teal-600 text-white rounded-xl font-bold"
@@ -111,7 +140,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Bottom Nav for Mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center z-50">
         {[
           { id: 'dashboard', label: 'إحصائيات', icon: '🏠' },
