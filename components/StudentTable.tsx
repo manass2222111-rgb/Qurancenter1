@@ -25,8 +25,6 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
 
     // 2. الفلترة المخصصة لكل عمود
     const matchesColumnFilters = Object.entries(columnFilters).every(([key, filterValue]) => {
-      // Fix: Ensure filterValue is a string and not empty before calling smartMatch
-      // This addresses the "Argument of type 'unknown' is not assignable to parameter of type 'string'" error.
       if (!filterValue || typeof filterValue !== 'string') return true;
       const studentValue = s[key as keyof Student];
       return smartMatch(String(studentValue), filterValue);
@@ -97,6 +95,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
                 <th className="p-4 font-bold text-gray-600 text-sm w-16">م</th>
                 <th className="p-4 font-bold text-gray-600 text-sm min-w-[200px]">اسم الدارس</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">الجنسية</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">رقم الهوية</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">الفترة</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">المستوى</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">المحفظ</th>
@@ -131,6 +130,15 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
                       placeholder="الجنسية..."
                       value={columnFilters.nationality || ''}
                       onChange={(e) => handleColumnFilterChange('nationality', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="text" 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      placeholder="رقم الهوية..."
+                      value={columnFilters.nationalId || ''}
+                      onChange={(e) => handleColumnFilterChange('nationalId', e.target.value)}
                     />
                   </td>
                   <td className="p-2">
@@ -184,6 +192,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
                     <td className="p-4 text-sm text-gray-500">{s.id}</td>
                     <td className="p-4 font-bold text-teal-900">{s.name}</td>
                     <td className="p-4 text-sm text-gray-600">{s.nationality}</td>
+                    <td className="p-4 text-sm text-gray-600 font-mono">{s.nationalId}</td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.period === 'صباحي' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'}`}>
                         {s.period}
@@ -204,7 +213,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-gray-400 italic">
+                  <td colSpan={9} className="p-12 text-center text-gray-400 italic">
                     لا توجد بيانات مطابقة لخيارات البحث المحددة...
                   </td>
                 </tr>
