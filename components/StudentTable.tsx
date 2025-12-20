@@ -8,74 +8,83 @@ interface StudentTableProps {
 }
 
 const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    nationality: '',
-    period: '',
-    level: '',
-  });
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<Partial<Record<keyof Student, string>>>({});
 
-  const uniqueNationalities = Array.from(new Set(students.map(s => s.nationality))).filter(Boolean);
+  // استخراج القيم الفريدة للفلاتر المنسدلة
+  const uniqueTeachers = Array.from(new Set(students.map(s => s.teacher))).filter(Boolean).sort();
+  const uniqueLevels = Array.from(new Set(students.map(s => s.level))).filter(Boolean).sort();
   const uniquePeriods = Array.from(new Set(students.map(s => s.period))).filter(Boolean);
-  const uniqueLevels = Array.from(new Set(students.map(s => s.level))).filter(Boolean);
 
   const filteredStudents = students.filter((s) => {
-    const matchesSearch = 
-      smartMatch(s.name, searchTerm) || 
-      smartMatch(s.nationalId, searchTerm) || 
-      smartMatch(s.phone, searchTerm);
-    
-    const matchesNationality = !filters.nationality || s.nationality === filters.nationality;
-    const matchesPeriod = !filters.period || s.period === filters.period;
-    const matchesLevel = !filters.level || s.level === filters.level;
+    // 1. البحث الشامل في كل الحقول
+    const matchesGlobal = !globalSearch || Object.values(s).some(value => 
+      smartMatch(String(value), globalSearch)
+    );
 
-    return matchesSearch && matchesNationality && matchesPeriod && matchesLevel;
+    // 2. الفلترة المخصصة لكل عمود
+    const matchesColumnFilters = Object.entries(columnFilters).every(([key, filterValue]) => {
+      // Fix: Ensure filterValue is a string and not empty before calling smartMatch
+      // This addresses the "Argument of type 'unknown' is not assignable to parameter of type 'string'" error.
+      if (!filterValue || typeof filterValue !== 'string') return true;
+      const studentValue = s[key as keyof Student];
+      return smartMatch(String(studentValue), filterValue);
+    });
+
+    return matchesGlobal && matchesColumnFilters;
   });
+
+  const handleColumnFilterChange = (key: keyof Student, value: string) => {
+    setColumnFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setColumnFilters({});
+    setGlobalSearch('');
+  };
 
   return (
     <div className="space-y-4">
-      {/* Search & Filter Header */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="ابحث عن اسم، رقم هوية، أو رقم هاتف (بحث ذكي)..."
-            className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all outline-none"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+      {/* Search Header */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className="relative flex-1 w-full">
+            <input
+              type="text"
+              placeholder="بحث شامل في كافة البيانات (اسم، هاتف، معلم، سكن...)"
+              className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all outline-none"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <select 
-            className="p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
-            value={filters.nationality}
-            onChange={(e) => setFilters(prev => ({ ...prev, nationality: e.target.value }))}
-          >
-            <option value="">كل الجنسيات</option>
-            {uniqueNationalities.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-          <select 
-            className="p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
-            value={filters.period}
-            onChange={(e) => setFilters(prev => ({ ...prev, period: e.target.value }))}
-          >
-            <option value="">كل الفترات</option>
-            {uniquePeriods.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <select 
-            className="p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
-            value={filters.level}
-            onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
-          >
-            <option value="">كل المستويات</option>
-            {uniqueLevels.map(l => <option key={l} value={l}>{l}</option>)}
-          </select>
+          <div className="flex gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                showAdvancedFilters ? 'bg-teal-700 text-white shadow-lg' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              {showAdvancedFilters ? 'إخفاء الفلاتر' : 'فلاتر الأعمدة'}
+            </button>
+            {(globalSearch || Object.keys(columnFilters).length > 0) && (
+              <button 
+                onClick={clearFilters}
+                className="px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
+                title="مسح الكل"
+              >
+                مسح
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -85,8 +94,8 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
           <table className="w-full text-right border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="p-4 font-bold text-gray-600 text-sm">م</th>
-                <th className="p-4 font-bold text-gray-600 text-sm">اسم الدارس</th>
+                <th className="p-4 font-bold text-gray-600 text-sm w-16">م</th>
+                <th className="p-4 font-bold text-gray-600 text-sm min-w-[200px]">اسم الدارس</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">الجنسية</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">الفترة</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">المستوى</th>
@@ -94,6 +103,79 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
                 <th className="p-4 font-bold text-gray-600 text-sm">رقم الهاتف</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">الإجراء</th>
               </tr>
+              {/* Advanced Filter Row */}
+              {showAdvancedFilters && (
+                <tr className="bg-teal-50/50 border-b border-teal-100 animate-in fade-in duration-300">
+                  <td className="p-2">
+                    <input 
+                      type="text" 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      placeholder="رقم..."
+                      value={columnFilters.id || ''}
+                      onChange={(e) => handleColumnFilterChange('id', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="text" 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      placeholder="فلترة بالاسم..."
+                      value={columnFilters.name || ''}
+                      onChange={(e) => handleColumnFilterChange('name', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="text" 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      placeholder="الجنسية..."
+                      value={columnFilters.nationality || ''}
+                      onChange={(e) => handleColumnFilterChange('nationality', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <select 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      value={columnFilters.period || ''}
+                      onChange={(e) => handleColumnFilterChange('period', e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {uniquePeriods.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </td>
+                  <td className="p-2">
+                    <select 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      value={columnFilters.level || ''}
+                      onChange={(e) => handleColumnFilterChange('level', e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {uniqueLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </td>
+                  <td className="p-2">
+                    <select 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500"
+                      value={columnFilters.teacher || ''}
+                      onChange={(e) => handleColumnFilterChange('teacher', e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {uniqueTeachers.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="text" 
+                      className="w-full p-2 text-xs border border-teal-200 rounded bg-white outline-none focus:ring-1 focus:ring-teal-500 text-left"
+                      dir="ltr"
+                      placeholder="رقم الهاتف..."
+                      value={columnFilters.phone || ''}
+                      onChange={(e) => handleColumnFilterChange('phone', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2"></td>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredStudents.length > 0 ? (
@@ -123,7 +205,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
               ) : (
                 <tr>
                   <td colSpan={8} className="p-12 text-center text-gray-400 italic">
-                    لا توجد بيانات مطابقة للبحث...
+                    لا توجد بيانات مطابقة لخيارات البحث المحددة...
                   </td>
                 </tr>
               )}
@@ -131,10 +213,10 @@ const StudentTable: React.FC<StudentTableProps> = ({ students }) => {
           </table>
         </div>
         <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-           <span className="text-sm text-gray-500">إجمالي النتائج: {filteredStudents.length}</span>
+           <span className="text-sm text-gray-600 font-medium">إجمالي النتائج: <span className="text-teal-700">{filteredStudents.length}</span> من أصل <span className="text-gray-400">{students.length}</span></span>
            <div className="flex gap-2">
-             <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100">السابق</button>
-             <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100">التالي</button>
+             <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50">السابق</button>
+             <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50">التالي</button>
            </div>
         </div>
       </div>
