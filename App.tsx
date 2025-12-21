@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchSheetData, addStudentToSheet, getScriptUrl, setScriptUrl } from './services/googleSheets';
+import { fetchSheetData, performSheetAction, getScriptUrl, setScriptUrl } from './services/googleSheets';
 import { Student, ViewType } from './types';
 import Dashboard from './components/Dashboard';
 import StudentTable from './components/StudentTable';
@@ -40,25 +40,21 @@ const App: React.FC = () => {
 
   useEffect(() => { loadData(); }, []);
 
-  const handleAddStudent = async (newStudent: Student) => {
+  const handleAction = async (student: Student, action: 'add' | 'update' | 'delete') => {
     if (!scriptUrl) {
-      alert("عذراً! يجب ضبط 'رابط المزامنة' من الإعدادات أولاً ليتم الحفظ في جوجل شيت.");
       setShowSettings(true);
       return;
     }
-
     try {
       setIsSaving(true);
-      const success = await addStudentToSheet(newStudent);
-      
+      const success = await performSheetAction(student, action);
       if (success) {
-        // تحديث محلي فوري وتحديث من السحابة بعد قليل
-        setStudents(prev => [newStudent, ...prev]);
-        setActiveView('table');
-        setTimeout(loadData, 2000); // إعادة التحميل للتأكد من المزامنة
+        setTimeout(loadData, 2000); // تحديث القائمة بعد ثانيتين لضمان استقرار الشيت
+        if (action === 'delete') alert("تم حذف الدارس بنجاح.");
+        if (action === 'update') alert("تم تحديث البيانات بنجاح.");
       }
     } catch (err) {
-      alert("حدث خطأ تقني في الاتصال.");
+      alert("حدث خطأ في الاتصال بالسحابة.");
     } finally {
       setIsSaving(false);
     }
@@ -121,26 +117,28 @@ const App: React.FC = () => {
         </div>
 
         <div className="mt-auto p-8">
-          <button 
-            onClick={() => setShowSettings(true)}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold text-sm"
-          >
+          <button onClick={() => setShowSettings(true)} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold text-sm">
             <Icons.Settings /> الإعدادات
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
-          <h2 className="text-slate-900 font-extrabold text-xl capitalize">
+          <h2 className="text-slate-900 font-extrabold text-xl">
             {activeView === 'dashboard' ? 'لوحة المعلومات' : activeView === 'table' ? 'سجل الطلاب' : activeView === 'alerts' ? 'مركز التنبيهات' : 'إضافة طالب'}
           </h2>
 
           <div className="flex items-center gap-6">
+            {isSaving && (
+              <div className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full border border-indigo-100 animate-pulse">
+                <span className="text-[10px] font-black uppercase tracking-tighter">جاري المزامنة مع جوجل...</span>
+              </div>
+            )}
+            
             <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase ${scriptUrl ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
               <div className={`w-2 h-2 rounded-full ${scriptUrl ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-              {scriptUrl ? 'متصل بالسحابة' : 'غير متصل (اضبط الإعدادات)'}
+              {scriptUrl ? 'متصل' : 'ضبط الإعدادات'}
             </div>
             
             <button onClick={() => setIsNotificationOpen(!isNotificationOpen)} className="relative text-slate-500 hover:bg-slate-100 w-10 h-10 flex items-center justify-center rounded-full transition-all">
@@ -157,9 +155,15 @@ const App: React.FC = () => {
           ) : (
             <div className="animate-fade-up">
               {activeView === 'dashboard' && <Dashboard students={students} />}
-              {activeView === 'table' && <StudentTable students={students} />}
+              {activeView === 'table' && (
+                <StudentTable 
+                  students={students} 
+                  onUpdate={(s) => handleAction(s, 'update')} 
+                  onDelete={(s) => handleAction(s, 'delete')} 
+                />
+              )}
               {activeView === 'alerts' && <AlertsView notifications={notifications} />}
-              {activeView === 'add' && <AddStudentForm onAdd={handleAddStudent} onCancel={() => setActiveView('table')} studentsCount={students.length} isSaving={isSaving} />}
+              {activeView === 'add' && <AddStudentForm onAdd={(s) => handleAction(s, 'add')} onCancel={() => setActiveView('table')} studentsCount={students.length} isSaving={isSaving} />}
             </div>
           )}
         </div>
@@ -169,30 +173,20 @@ const App: React.FC = () => {
       {showSettings && (
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6">
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden animate-fade-up">
-            <div className="p-8 bg-[#0F172A] text-white">
-              <h3 className="text-xl font-black mb-1">إعدادات الربط السحابي</h3>
-              <p className="text-slate-400 text-xs">اربط تطبيقك بجوجل شيت للكتابة المباشرة</p>
+            <div className="p-8 bg-[#0F172A] text-white text-center">
+              <h3 className="text-xl font-black mb-1">الربط السحابي الذكي</h3>
+              <p className="text-slate-400 text-xs">اربط التطبيق بالشيت للتعديل والحذف المباشر</p>
             </div>
             <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase">رابط Google Apps Script (Web App URL)</label>
-                <input 
-                  type="text" 
-                  value={scriptUrl} 
-                  onChange={(e) => setScriptUrlState(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all text-sm font-mono"
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                />
-              </div>
-              <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100">
-                <p className="text-[10px] text-blue-700 font-bold leading-relaxed">
-                  تنبيه: يجب أن يكون الرابط من نوع "Web App" مفعّل بصلاحية "Anyone" في محرر Google Apps Script داخل الشيت الخاص بك.
-                </p>
-              </div>
-              <div className="flex gap-4">
-                <button onClick={handleSaveSettings} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">حفظ الإعدادات</button>
-                <button onClick={() => setShowSettings(false)} className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">إغلاق</button>
-              </div>
+              <input 
+                type="text" 
+                value={scriptUrl} 
+                onChange={(e) => setScriptUrlState(e.target.value)}
+                className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all text-xs font-mono"
+                placeholder="رابط Apps Script (URL)"
+              />
+              <button onClick={handleSaveSettings} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">حفظ وتفعيل المزامنة</button>
+              <button onClick={() => setShowSettings(false)} className="w-full text-slate-400 font-bold text-xs">إغلاق</button>
             </div>
           </div>
         </div>

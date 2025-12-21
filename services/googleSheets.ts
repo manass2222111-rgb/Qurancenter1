@@ -4,7 +4,6 @@ import { Student } from '../types';
 const SHEET_ID = '1idfCJE2jQLzZzIyU8C0JN0Na0PxfoKq-mAP6_7Pz-L4';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
 
-// الحصول على رابط السكريبت من ذاكرة المتصفح
 export const getScriptUrl = () => localStorage.getItem('google_script_url') || '';
 export const setScriptUrl = (url: string) => localStorage.setItem('google_script_url', url);
 
@@ -13,13 +12,10 @@ const parseCSV = (text: string): string[][] => {
   let currentRow: string[] = [];
   let currentField = '';
   let inQuotes = false;
-
   const cleanText = text.replace(/^\uFEFF/, '');
-
   for (let i = 0; i < cleanText.length; i++) {
     const char = cleanText[i];
     const nextChar = cleanText[i + 1];
-
     if (char === '"' && inQuotes && nextChar === '"') {
       currentField += '"';
       i++;
@@ -40,27 +36,23 @@ const parseCSV = (text: string): string[][] => {
       currentField += char;
     }
   }
-
   if (currentRow.length > 0 || currentField !== '') {
     currentRow.push(currentField.trim());
     rows.push(currentRow);
   }
-
   return rows;
 };
 
 export const fetchSheetData = async (): Promise<Student[]> => {
   try {
-    const response = await fetch(`${CSV_URL}&t=${Date.now()}`); // إضافة timestamp لمنع الكاش
+    const response = await fetch(`${CSV_URL}&t=${Date.now()}`);
     if (!response.ok) throw new Error(`فشل الاتصال: ${response.statusText}`);
     const csvText = await response.text();
     const allRows = parseCSV(csvText);
     if (allRows.length === 0) return [];
-
     const firstRowStr = JSON.stringify(allRows[0]);
     const hasHeader = firstRowStr.includes('اسم') || firstRowStr.includes('الدارس');
     const dataRows = hasHeader ? allRows.slice(1) : allRows;
-
     return dataRows.filter(row => row.some(cell => cell.length > 0)).map((row) => ({
       id: row[0] || '',
       name: row[1] || '',
@@ -89,35 +81,30 @@ export const fetchSheetData = async (): Promise<Student[]> => {
   }
 };
 
-export const addStudentToSheet = async (student: Student): Promise<boolean> => {
+/**
+ * وظيفة موحدة لإرسال العمليات (إضافة، تعديل، حذف)
+ */
+export const performSheetAction = async (student: Student, action: 'add' | 'update' | 'delete'): Promise<boolean> => {
   const SCRIPT_URL = getScriptUrl();
-  
-  if (!SCRIPT_URL) {
-    console.error("لم يتم ضبط رابط Google Apps Script.");
-    return false;
-  }
+  if (!SCRIPT_URL) return false;
 
   try {
-    // إرسال البيانات كـ FormData لسهولة التعامل مع Apps Script
     const formData = new URLSearchParams();
+    formData.append('action', action);
     Object.entries(student).forEach(([key, value]) => {
-      formData.append(key, value);
+      formData.append(key, String(value));
     });
 
-    const response = await fetch(SCRIPT_URL, {
+    await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       cache: 'no-cache',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
     });
-
-    // في وضع no-cors لا نستطيع قراءة الاستجابة، سنفترض النجاح إذا لم يحدث Error
     return true;
   } catch (error) {
-    console.error('Error saving to sheet:', error);
+    console.error(`Error during ${action}:`, error);
     return false;
   }
 };
