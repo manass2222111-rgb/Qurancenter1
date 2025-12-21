@@ -22,4 +22,4 @@ export interface Student {
   completion: string; // نسبة اكتمال المعلومات
 }
 
-export type ViewType = 'dashboard' | 'table' | 'add';
+export type ViewType = 'dashboard' | 'table' | 'add' | 'alerts';

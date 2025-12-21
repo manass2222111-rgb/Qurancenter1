@@ -5,219 +5,166 @@ import { Student, ViewType } from './types';
 import Dashboard from './components/Dashboard';
 import StudentTable from './components/StudentTable';
 import NotificationPanel from './components/NotificationPanel';
+import AddStudentForm from './components/AddStudentForm';
+import AlertsView from './components/AlertsView';
+
+const Icons = {
+  Home: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>,
+  Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
+  Add: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>,
+  Bell: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>,
+  Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>,
+};
 
 const App: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      setError(null);
       const data = await fetchSheetData();
       setStudents(data);
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ غير متوقع أثناء تحميل البيانات.');
+      setError("تعذر المزامنة. تأكد من اتصالك بالإنترنت.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  // حساب التنبيهات
   const notifications = useMemo(() => {
     const now = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(now.getDate() + 30);
-
-    const expiredIds: Student[] = [];
-    const expiringSoonIds: Student[] = [];
-    const unpaidFees: Student[] = [];
-
-    students.forEach(s => {
-      // 1. الرسوم
-      if (s.fees !== 'نعم') {
-        unpaidFees.push(s);
-      }
-
-      // 2. الهوية
-      if (s.expiryId) {
-        try {
-          // محاولة تحويل التاريخ (نفترض تنسيق YYYY-MM-DD أو مشابه)
-          const expiryDate = new Date(s.expiryId);
-          if (!isNaN(expiryDate.getTime())) {
-            if (expiryDate < now) {
-              expiredIds.push(s);
-            } else if (expiryDate <= thirtyDaysFromNow) {
-              expiringSoonIds.push(s);
-            }
-          }
-        } catch (e) {
-          console.error("Invalid date format for student:", s.name);
-        }
-      }
-    });
-
-    return { expiredIds, expiringSoonIds, unpaidFees };
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    
+    return {
+      expiredIds: students.filter(s => s.expiryId && new Date(s.expiryId) < now),
+      expiringSoonIds: students.filter(s => {
+        if (!s.expiryId) return false;
+        const d = new Date(s.expiryId);
+        return d > now && d.getTime() < (now.getTime() + thirtyDays);
+      }),
+      unpaidFees: students.filter(s => s.fees !== 'نعم')
+    };
   }, [students]);
 
-  const totalNotifications = notifications.expiredIds.length + 
-                           notifications.expiringSoonIds.length + 
-                           notifications.unpaidFees.length;
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-red-100">
-          <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
-            ⚠️
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">تعذر تحميل البيانات</h2>
-          <p className="text-gray-600 mb-6 leading-relaxed">{error}</p>
-          <div className="space-y-3">
-            <button 
-              onClick={loadData}
-              className="w-full py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-lg shadow-teal-100"
-            >
-              إعادة المحاولة
-            </button>
-            <p className="text-xs text-gray-400">تأكد من أن ملف جوجل شيت "عام" (Public) وأن الرابط صحيح.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const totalNotifications = notifications.expiredIds.length + notifications.expiringSoonIds.length + notifications.unpaidFees.length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-20">
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg shadow-teal-200">
-                  🌙
+    <div className="min-h-screen bg-[#F1F5F9] flex overflow-hidden">
+      <aside className="hidden lg:flex w-72 bg-[#0F172A] flex-col relative z-20">
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">ن</div>
+            <div>
+              <h1 className="text-white font-black text-lg leading-none tracking-tight">نور القرآن</h1>
+              <span className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest mt-1 block">نظام الإدارة</span>
+            </div>
+          </div>
+
+          <nav className="space-y-2">
+            {[
+              { id: 'dashboard', label: 'الرئيسية', icon: Icons.Home },
+              { id: 'table', label: 'الطلاب', icon: Icons.Users },
+              { id: 'alerts', label: 'التنبيهات', icon: Icons.Alert, count: totalNotifications },
+              { id: 'add', label: 'تسجيل جديد', icon: Icons.Add },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => { setActiveView(item.id as ViewType); setIsNotificationOpen(false); }}
+                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm ${
+                  activeView === item.id 
+                  ? 'sidebar-item-active text-white' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <item.icon />
+                  {item.label}
                 </div>
-                <h1 className="text-xl font-black text-teal-800 hidden sm:block">نظام إدارة الحلقات</h1>
-              </div>
-              
-              <div className="hidden md:flex gap-1">
-                {[
-                  { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
-                  { id: 'table', label: 'قاعدة البيانات', icon: '📊' },
-                  { id: 'add', label: 'إضافة دارس', icon: '➕' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveView(item.id as ViewType)}
-                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
-                      activeView === item.id 
-                      ? 'bg-teal-600 text-white shadow-md shadow-teal-100' 
-                      : 'text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span>{item.icon}</span>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-               {/* زر التنبيهات المطور */}
-               <div className="relative">
-                 <button 
-                  onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                  className={`p-2 rounded-xl transition-all relative ${isNotificationOpen ? 'bg-teal-50 text-teal-600' : 'text-gray-400 hover:text-teal-600 hover:bg-gray-50'}`}
-                 >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    {totalNotifications > 0 && (
-                      <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center animate-bounce">
-                        {totalNotifications}
-                      </span>
-                    )}
-                 </button>
-
-                 {isNotificationOpen && (
-                   <NotificationPanel 
-                    notifications={notifications} 
-                    onClose={() => setIsNotificationOpen(false)} 
-                   />
-                 )}
-               </div>
-
-               <div className="w-10 h-10 rounded-full bg-teal-100 border-2 border-teal-200 flex items-center justify-center text-teal-700 font-bold cursor-pointer">
-                  أ
-               </div>
-            </div>
-          </div>
+                {item.count ? (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] ${activeView === item.id ? 'bg-white/20' : 'bg-rose-500 text-white'}`}>
+                    {item.count}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </nav>
         </div>
-      </nav>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-96">
-            <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-teal-700 font-bold animate-pulse">جاري تحميل البيانات من جوجل...</p>
-          </div>
-        ) : (
-          <>
-            <header className="mb-8">
-              <h2 className="text-2xl font-black text-gray-900">
-                {activeView === 'dashboard' && 'نظرة عامة على البيانات'}
-                {activeView === 'table' && 'قاعدة بيانات الدارسين'}
-                {activeView === 'add' && 'إضافة دارس جديد'}
-              </h2>
-              <p className="text-gray-500 mt-1">
-                {activeView === 'dashboard' && 'إحصائيات وتحليلات الحلقات لعام 2025'}
-                {activeView === 'table' && 'إدارة واستعراض كافة بيانات الدارسين المسجلين'}
-                {activeView === 'add' && 'تعبئة بيانات الدارس لإضافته لقاعدة البيانات'}
-              </p>
-            </header>
-
-            {activeView === 'dashboard' && <Dashboard students={students} />}
-            {activeView === 'table' && <StudentTable students={students} />}
-            {activeView === 'add' && (
-              <div className="bg-white p-12 rounded-3xl border border-dashed border-gray-300 text-center flex flex-col items-center justify-center gap-4">
-                 <div className="text-6xl">🚧</div>
-                 <h3 className="text-xl font-bold">نموذج الإضافة قيد التطوير</h3>
-                 <p className="text-gray-500 max-w-md">سيتم ربط هذا النموذج بـ Google App Script لتحديث الجدول مباشرة.</p>
-                 <button 
-                  onClick={() => setActiveView('table')}
-                  className="mt-4 px-6 py-2 bg-teal-600 text-white rounded-xl font-bold"
-                 >
-                   العودة للقاعدة
-                 </button>
+        <div className="mt-auto p-8">
+           <div className="bg-slate-800/50 p-5 rounded-3xl border border-slate-700/50">
+              <p className="text-slate-400 text-xs font-medium mb-3">الحالة</p>
+              <div className="flex items-center gap-2 text-white text-xs font-bold">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                متصل
               </div>
-            )}
-          </>
-        )}
-      </main>
+           </div>
+        </div>
+      </aside>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center z-50">
-        {[
-          { id: 'dashboard', label: 'إحصائيات', icon: '🏠' },
-          { id: 'table', label: 'البيانات', icon: '📊' },
-          { id: 'add', label: 'إضافة', icon: '➕' },
-        ].map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveView(item.id as ViewType)}
-            className={`flex flex-col items-center gap-1 ${activeView === item.id ? 'text-teal-600' : 'text-gray-400'}`}
-          >
-            <span className="text-xl">{item.icon}</span>
-            <span className="text-xs font-bold">{item.label}</span>
-          </button>
-        ))}
-      </div>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <h2 className="text-slate-900 font-extrabold text-xl">
+              {activeView === 'dashboard' ? 'لوحة المعلومات' : 
+               activeView === 'table' ? 'سجل الطلاب' : 
+               activeView === 'alerts' ? 'مركز التنبيهات' : 'إضافة طالب'}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className={`w-10 h-10 flex items-center justify-center rounded-full transition-all relative ${isNotificationOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+              >
+                <Icons.Bell />
+                {totalNotifications > 0 && (
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full border-2 border-white flex items-center justify-center">
+                    {totalNotifications}
+                  </span>
+                )}
+              </button>
+              {isNotificationOpen && (
+                <NotificationPanel 
+                  notifications={notifications} 
+                  onClose={() => setIsNotificationOpen(false)} 
+                  onViewAll={() => { setActiveView('alerts'); setIsNotificationOpen(false); }}
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pl-6 border-r border-slate-200">
+               <div className="text-right hidden sm:block">
+                  <p className="text-xs font-bold text-slate-900 leading-none">أحمد السديري</p>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 block">مشرف عام</span>
+               </div>
+               <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg">أ</div>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-4 text-slate-400 font-bold">جاري المزامنة...</p>
+            </div>
+          ) : (
+            <div className="animate-fade-up">
+              {activeView === 'dashboard' && <Dashboard students={students} />}
+              {activeView === 'table' && <StudentTable students={students} />}
+              {activeView === 'alerts' && <AlertsView notifications={notifications} />}
+              {activeView === 'add' && <AddStudentForm onCancel={() => setActiveView('table')} />}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

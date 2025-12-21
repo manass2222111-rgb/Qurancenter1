@@ -4,28 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة الحلقات</title>
+    <title>منصة نور القرآن الإدارية</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --brand-primary: #4F46E5;
+            --brand-secondary: #0EA5E9;
+            --surface-bg: #F8FAFC;
+        }
         body {
-            font-family: 'Tajawal', sans-serif;
-            background-color: #f8fafc;
+            font-family: 'Tajawal', 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--surface-bg);
+            color: #1E293B;
+            overflow-x: hidden;
         }
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        .sidebar-item-active {
+            background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
         }
-        ::-webkit-scrollbar-thumb {
-            background: #0d9488;
-            border-radius: 4px;
+        .custom-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #0f766e;
+        /* تحسينات الأنيميشن */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
+        .animate-fade-up {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
     </style>
     <script type="importmap">
 {
@@ -34,8 +52,9 @@
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "lucide-react": "https://esm.sh/lucide-react@0.454.0?external=react",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
