@@ -29,16 +29,17 @@
             box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
         }
         
-        /* حل نهائي لمشكلة التواريخ المقلوبة */
+        /* حل شامل لإظهار التاريخ كأرقام فقط ومنع الحروف المقلوبة */
         input[type="date"] {
             direction: ltr !important;
             text-align: right !important;
-            unicode-bidi: plaintext !important;
+            font-family: sans-serif !important;
         }
+        
+        /* تحسين مظهر الحقل ليتوافق مع التصميم العربي مع بقاء المحتوى رقمي */
         input[type="date"]::-webkit-datetime-edit {
             direction: ltr !important;
-            display: flex !important;
-            flex-direction: row !important;
+            unicode-bidi: plaintext !important;
         }
 
         @keyframes fadeIn {
