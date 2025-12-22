@@ -10,17 +10,19 @@ interface AddStudentFormProps {
   isSaving?: boolean;
 }
 
+// القائمة المعتمدة والمرتبة للمستويات كما طلب المستخدم
 const LEVEL_ORDER = ['تمهيدي', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس'];
 
 const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studentsCount, students, isSaving = false }) => {
   const [step, setStep] = useState(1);
+  const [manualInputs, setManualInputs] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Partial<Student>>({
     regDate: new Date().toISOString().split('T')[0],
     fees: 'لا',
     completion: '0%'
   });
 
-  // استخراج القوائم الذكية من البيانات الحالية
+  // استخراج القيم الفريدة من الشيت تلقائياً (بدون تأليف بيانات)
   const dropdownOptions = useMemo(() => {
     const getUnique = (key: keyof Student) => 
       Array.from(new Set(students.map(s => s[key]).filter(v => v && v.trim() !== ''))).sort();
@@ -36,6 +38,13 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (isSaving) return;
     const { name, value } = e.target;
+    
+    if (value === "__MANUAL__") {
+      setManualInputs(prev => ({ ...prev, [name]: true }));
+      setFormData(prev => ({ ...prev, [name]: '' }));
+      return;
+    }
+
     setFormData(prev => {
       const updated = { ...prev, [name]: value };
       if (name === 'dob' && value) {
@@ -88,6 +97,44 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
     { title: 'المسار التعليمي', icon: '📖' },
     { title: 'البيانات الإدارية', icon: '📂' }
   ];
+
+  // مكون حقل الاختيار الديناميكي
+  const DynamicSelect = ({ name, label, options, placeholder }: { name: string, label: string, options: string[], placeholder: string }) => (
+    <div className="space-y-2">
+      <label className="text-[11px] font-black text-slate-400 uppercase pr-2">{label}</label>
+      {manualInputs[name] ? (
+        <div className="relative">
+          <input 
+            name={name} 
+            type="text" 
+            value={(formData as any)[name] || ''} 
+            onChange={handleChange}
+            placeholder={`اكتب ${label} جديد...`}
+            className="w-full px-6 py-4 bg-indigo-50 border-2 border-indigo-200 rounded-2xl outline-none font-bold text-indigo-700"
+            autoFocus
+          />
+          <button 
+            type="button" 
+            onClick={() => setManualInputs(p => ({ ...p, [name]: false }))}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] bg-white px-2 py-1 rounded-lg shadow-sm font-bold text-slate-400"
+          >
+            رجوع للقائمة
+          </button>
+        </div>
+      ) : (
+        <select 
+          name={name} 
+          value={(formData as any)[name] || ''} 
+          onChange={handleChange} 
+          className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold appearance-none"
+        >
+          <option value="">{placeholder}</option>
+          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          <option value="__MANUAL__" className="text-indigo-600 font-bold">+ إضافة قيمة جديدة غير موجودة</option>
+        </select>
+      )}
+    </div>
+  );
 
   return (
     <div className={`max-w-4xl mx-auto bg-white rounded-[3rem] border border-slate-100 shadow-2xl overflow-hidden mb-10 transition-opacity ${isSaving ? 'opacity-70 pointer-events-none' : ''}`}>
@@ -148,33 +195,24 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
 
         {step === 2 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-up">
+            <DynamicSelect name="teacher" label="اسم المحفظ" options={dropdownOptions.teachers} placeholder="اختر المحفظ من الشيت" />
+            <DynamicSelect name="circle" label="الحلقة" options={dropdownOptions.circles} placeholder="اختر الحلقة من الشيت" />
+            
             <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">المحفظ</label>
-              <select name="teacher" value={formData.teacher || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold appearance-none">
-                <option value="">اختر من القائمة</option>
-                {dropdownOptions.teachers.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">الحلقة</label>
-              <select name="circle" value={formData.circle || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold appearance-none">
-                <option value="">اختر من القائمة</option>
-                {dropdownOptions.circles.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">المستوى</label>
+              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">المستوى الأكاديمي</label>
               <select name="level" value={formData.level || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold appearance-none">
                 <option value="">اختر المستوى</option>
                 {LEVEL_ORDER.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
+
             <div className="space-y-2">
               <label className="text-[11px] font-black text-slate-400 uppercase pr-2">الجزء الحالي</label>
               <input name="part" type="number" min="1" max="30" value={formData.part || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold" placeholder="1-30" />
             </div>
+            
             <div className="space-y-2 md:col-span-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">تاريخ التسجيل</label>
+              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">تاريخ التسجيل بالمركز</label>
               <input name="regDate" type="date" lang="en" dir="ltr" value={formData.regDate || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-right" />
             </div>
           </div>
@@ -183,25 +221,20 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
         {step === 3 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-up">
             <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">رقم الهوية</label>
+              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">رقم الهوية / الإقامة</label>
               <input name="nationalId" type="text" value={formData.nationalId || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold" placeholder="10xxxxxxxx" />
             </div>
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">الفئة</label>
-              <select name="category" value={formData.category || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold">
-                <option value="">اختر الفئة</option>
-                {dropdownOptions.categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            
+            <DynamicSelect name="category" label="الفئة" options={dropdownOptions.categories} placeholder="اختر الفئة من الشيت" />
+            <DynamicSelect name="period" label="الفترة" options={dropdownOptions.periods} placeholder="اختر الفترة من الشيت" />
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">تاريخ انتهاء الهوية</label>
+              <input name="expiryId" type="date" lang="en" dir="ltr" value={formData.expiryId || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-right" />
             </div>
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">الفترة</label>
-              <select name="period" value={formData.period || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold">
-                <option value="">اختر الفترة</option>
-                {dropdownOptions.periods.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">سداد الرسوم</label>
+
+            <div className="space-y-2 md:col-span-2 pt-4">
+              <label className="text-[11px] font-black text-slate-400 uppercase pr-2">هل تم سداد الرسوم؟</label>
               <div className="flex gap-4">
                 {['نعم', 'لا'].map(option => (
                   <button
@@ -219,7 +252,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
         )}
 
         <div className="flex justify-between items-center pt-10 border-t border-slate-50">
-          <button type="button" onClick={onCancel} className="text-slate-400 font-black text-sm hover:text-rose-600 transition-colors">إلغاء</button>
+          <button type="button" onClick={onCancel} className="text-slate-400 font-black text-sm hover:text-rose-600 transition-colors">إلغاء العملية</button>
           <div className="flex gap-4">
             {step > 1 && (
               <button type="button" onClick={() => setStep(step - 1)} className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm">السابق</button>
@@ -227,7 +260,13 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
             {step < 3 ? (
               <button type="button" onClick={() => setStep(step + 1)} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all">المتابعة</button>
             ) : (
-              <button type="submit" disabled={isSaving} className="px-10 py-4 bg-emerald-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-emerald-700 transition-all">إتمام التسجيل</button>
+              <button 
+                type="submit" 
+                disabled={isSaving} 
+                className={`px-10 py-4 rounded-2xl font-black text-sm shadow-xl transition-all ${isSaving ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+              >
+                {isSaving ? 'جاري الحفظ...' : 'إتمام التسجيل'}
+              </button>
             )}
           </div>
         </div>

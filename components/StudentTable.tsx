@@ -11,6 +11,7 @@ interface StudentTableProps {
 
 type TabType = 'personal' | 'academic' | 'admin';
 
+// المستويات الأكاديمية كما تم تحديدها
 const LEVEL_ORDER = ['تمهيدي', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس'];
 
 const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelete }) => {
@@ -20,6 +21,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState<Student | null>(null);
 
+  // استخراج الخيارات المتاحة فعلياً في الشيت
   const dropdownOptions = useMemo(() => {
     const getUnique = (key: keyof Student) => 
       Array.from(new Set(students.map(s => s[key]).filter(v => v && v.trim() !== ''))).sort();
@@ -75,7 +77,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
             onChange={e => handleFieldChange(fieldKey, e.target.value)}
             className="w-full bg-slate-50 border-2 border-indigo-50 rounded-xl px-3 py-2 text-sm font-bold text-indigo-700 outline-none focus:border-indigo-500"
           >
-            <option value="">اختر...</option>
+            <option value="">اختر من الشيت...</option>
             {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
           </select>
         ) : (
@@ -161,7 +163,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
                 <>
                   <DataField label="المعلم" value={selectedStudent.teacher} fieldKey="teacher" icon="👳‍♂️" isSelect options={dropdownOptions.teachers} />
                   <DataField label="الحلقة" value={selectedStudent.circle} fieldKey="circle" icon="🕌" isSelect options={dropdownOptions.circles} />
-                  <DataField label="المستوى" value={selectedStudent.level} fieldKey="level" icon="📊" isSelect options={LEVEL_ORDER} />
+                  <DataField label="المستوى الأكاديمي" value={selectedStudent.level} fieldKey="level" icon="📊" isSelect options={LEVEL_ORDER} />
                   <DataField label="الجزء الحالي" value={selectedStudent.part} fieldKey="part" icon="📖" />
                   <DataField label="تاريخ التسجيل" value={selectedStudent.regDate} fieldKey="regDate" type="date" icon="✍️" />
                 </>
