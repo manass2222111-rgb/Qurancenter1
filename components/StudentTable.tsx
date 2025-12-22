@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Student } from '../types';
 import { smartMatch } from '../utils/arabicSearch';
 
@@ -18,15 +18,6 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState<Student | null>(null);
 
-  // منع التمرير في الخلفية عند فتح البطاقة
-  useEffect(() => {
-    if (selectedStudent) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-  }, [selectedStudent]);
-
   const filteredData = useMemo(() => {
     return students.filter(student => {
       const searchableText = `${student.name} ${student.phone} ${student.teacher} ${student.circle} ${student.nationalId}`;
@@ -34,11 +25,17 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
     });
   }, [students, globalSearch]);
 
-  const handleOpenDetails = (student: Student) => {
+  const handleOpenProfile = (student: Student) => {
     setSelectedStudent(student);
     setEditFormData({ ...student });
     setIsEditMode(false);
     setActiveTab('personal');
+    // التمرير لأعلى الصفحة بسلاسة عند فتح البروفايل
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBack = () => {
+    setSelectedStudent(null);
   };
 
   const handleSave = async () => {
@@ -52,31 +49,136 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
     if (editFormData) setEditFormData({ ...editFormData, [key]: value });
   };
 
-  const InfoTile = ({ label, value, fieldKey, icon, type = 'text' }: any) => (
-    <div className="flex flex-col gap-1 p-3 bg-white rounded-xl border border-slate-100 hover:border-indigo-200 transition-all">
-      <label className="text-[9px] font-black text-slate-400 flex items-center gap-1.5 uppercase">
-        <span className="opacity-60">{icon}</span> {label}
-      </label>
+  const DataField = ({ label, value, fieldKey, icon, type = 'text' }: any) => (
+    <div className="group bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-lg grayscale group-hover:grayscale-0 transition-all">{icon}</span>
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{label}</label>
+      </div>
       {isEditMode ? (
         <input 
           type={type}
           value={(editFormData as any)?.[fieldKey] || ''}
           onChange={e => handleFieldChange(fieldKey, e.target.value)}
-          className="w-full bg-slate-50 border border-indigo-100 rounded-lg px-2 py-1 text-xs font-bold text-indigo-700 outline-none"
+          className="w-full bg-slate-50 border-2 border-indigo-50 rounded-xl px-3 py-2 text-sm font-bold text-indigo-700 outline-none focus:border-indigo-500 transition-colors"
         />
       ) : (
-        <span className="text-xs font-bold text-slate-700 truncate">{value || '—'}</span>
+        <div className="text-sm font-extrabold text-slate-800 break-words">{value || '—'}</div>
       )}
     </div>
   );
 
+  // إذا تم اختيار طالب، نعرض البروفايل بدلاً من الجدول
+  if (selectedStudent) {
+    return (
+      <div className="animate-in slide-in-from-left-4 duration-500">
+        {/* Profile Header */}
+        <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden mb-8">
+          <div className="bg-slate-900 p-8 md:p-12 text-white relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+            
+            <button onClick={handleBack} className="mb-8 flex items-center gap-2 text-indigo-300 hover:text-white transition-colors group">
+              <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-xs font-black uppercase">العودة للسجل</span>
+            </button>
+
+            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+              <div className="w-24 h-24 md:w-32 md:h-32 bg-indigo-600 rounded-[2.5rem] rotate-3 flex items-center justify-center text-4xl font-black shadow-2xl border-4 border-white/10">
+                {selectedStudent.name.charAt(0)}
+              </div>
+              <div className="text-center md:text-right flex-1">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
+                  <h2 className="text-2xl md:text-4xl font-black">{selectedStudent.name}</h2>
+                  <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase border ${selectedStudent.fees === 'نعم' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'}`}>
+                    {selectedStudent.fees === 'نعم' ? 'خالص الرسوم' : 'مستحق'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center md:justify-start gap-6 text-indigo-300 text-sm font-bold">
+                  <span className="flex items-center gap-2">🆔 {selectedStudent.id}</span>
+                  <span className="flex items-center gap-2">🕌 {selectedStudent.circle}</span>
+                  <span className="flex items-center gap-2">👳‍♂️ {selectedStudent.teacher}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 w-full md:w-auto">
+                {isEditMode ? (
+                  <button onClick={handleSave} className="px-10 py-4 bg-emerald-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-emerald-700 transition-all">حفظ التغييرات</button>
+                ) : (
+                  <button onClick={() => setIsEditMode(true)} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all">تعديل الملف</button>
+                )}
+                {!isEditMode && (
+                  <button onClick={() => onDelete?.(selectedStudent)} className="text-rose-400 hover:text-rose-500 text-[10px] font-black uppercase tracking-widest">حذف السجل نهائياً</button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs Navigation */}
+          <div className="flex border-b border-slate-100 bg-slate-50/50 p-2 gap-2">
+            {[
+              { id: 'personal', label: 'البيانات الشخصية', icon: '👤' },
+              { id: 'academic', label: 'المسار الدراسي', icon: '🎓' },
+              { id: 'admin', label: 'الشؤون الإدارية', icon: '📁' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as TabType)}
+                className={`flex-1 py-4 px-4 rounded-2xl text-[11px] font-black transition-all flex items-center justify-center gap-3 ${
+                  activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm border border-indigo-50' : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <span className="text-base">{tab.icon}</span> {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Profile Content */}
+          <div className="p-8 md:p-12 bg-white">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {activeTab === 'personal' && (
+                <>
+                  <DataField label="الاسم الكامل" value={selectedStudent.name} fieldKey="name" icon="👤" />
+                  <DataField label="رقم الهوية" value={selectedStudent.nationalId} fieldKey="nationalId" icon="🆔" />
+                  <DataField label="الجنسية" value={selectedStudent.nationality} fieldKey="nationality" icon="🌍" />
+                  <DataField label="رقم الجوال" value={selectedStudent.phone} fieldKey="phone" icon="📱" />
+                  <DataField label="تاريخ الميلاد" value={selectedStudent.dob} fieldKey="dob" type="date" icon="📅" />
+                  <DataField label="العمر" value={selectedStudent.age} fieldKey="age" icon="🎂" />
+                  <DataField label="العنوان" value={selectedStudent.address} fieldKey="address" icon="📍" />
+                </>
+              )}
+              {activeTab === 'academic' && (
+                <>
+                  <DataField label="المعلم" value={selectedStudent.teacher} fieldKey="teacher" icon="👳‍♂️" />
+                  <DataField label="الحلقة" value={selectedStudent.circle} fieldKey="circle" icon="🕌" />
+                  <DataField label="المستوى" value={selectedStudent.level} fieldKey="level" icon="📊" />
+                  <DataField label="الجزء الحالي" value={selectedStudent.part} fieldKey="part" icon="📖" />
+                  <DataField label="تاريخ التسجيل" value={selectedStudent.regDate} fieldKey="regDate" type="date" icon="✍️" />
+                  <DataField label="المؤهل العلمي" value={selectedStudent.qualification} fieldKey="qualification" icon="📜" />
+                </>
+              )}
+              {activeTab === 'admin' && (
+                <>
+                  <DataField label="انتهاء الهوية" value={selectedStudent.expiryId} fieldKey="expiryId" type="date" icon="⌛" />
+                  <DataField label="سداد الرسوم" value={selectedStudent.fees} fieldKey="fees" icon="💰" />
+                  <DataField label="الفئة العمرية" value={selectedStudent.category} fieldKey="category" icon="👥" />
+                  <DataField label="الفترة" value={selectedStudent.period} fieldKey="period" icon="⏰" />
+                  <DataField label="اكتمال الملف" value={selectedStudent.completion} fieldKey="completion" icon="✅" />
+                  <DataField label="الوظيفة" value={selectedStudent.job} fieldKey="job" icon="💼" />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // إذا لم يتم اختيار طالب، نعرض الجدول
   return (
     <div className="space-y-6">
-      {/* البحث العلوي */}
       <div className="relative group max-w-xl">
         <input 
           type="text" 
-          placeholder="ابحث عن أي طالب بالاسم أو الرقم..."
+          placeholder="ابحث بالاسم، الرقم، أو اسم المحفظ..."
           className="w-full pr-12 pl-6 py-4 bg-white border-none rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700"
           value={globalSearch}
           onChange={(e) => setGlobalSearch(e.target.value)}
@@ -84,35 +186,37 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
         <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
 
-      {/* الجدول الرئيسي */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-right">
-            <thead className="bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest">
+          <table className="w-full text-right border-collapse">
+            <thead className="bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.2em]">
               <tr>
-                <th className="px-6 py-4 text-center w-16">#</th>
-                <th className="px-6 py-4">اسم الدارس</th>
-                <th className="px-6 py-4">المعلم</th>
-                <th className="px-6 py-4 text-center">الحلقة</th>
-                <th className="px-6 py-4 text-center">الرسوم</th>
-                <th className="px-6 py-4 w-12"></th>
+                <th className="px-8 py-5 text-center w-20">#</th>
+                <th className="px-8 py-5">اسم الدارس</th>
+                <th className="px-8 py-5">المعلم</th>
+                <th className="px-8 py-5 text-center">الحلقة</th>
+                <th className="px-8 py-5 text-center">الحالة</th>
+                <th className="px-8 py-5 w-16"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredData.map((s, idx) => (
-                <tr key={s.id || idx} onClick={() => handleOpenDetails(s)} className="hover:bg-indigo-50/40 cursor-pointer transition-colors group">
-                  <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-300">{idx + 1}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{s.name}</td>
-                  <td className="px-6 py-4 text-xs font-medium text-slate-500">{s.teacher}</td>
-                  <td className="px-6 py-4 text-center text-xs font-medium text-slate-500">{s.circle}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black ${s.fees === 'نعم' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                <tr key={s.id || idx} onClick={() => handleOpenProfile(s)} className="hover:bg-indigo-50/50 cursor-pointer transition-colors group">
+                  <td className="px-8 py-5 text-center text-[10px] font-bold text-slate-300">{idx + 1}</td>
+                  <td className="px-8 py-5">
+                    <div className="font-extrabold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{s.name}</div>
+                    <div className="text-[10px] text-slate-400 font-medium mt-0.5">ID: {s.id} • {s.phone}</div>
+                  </td>
+                  <td className="px-8 py-5 text-xs font-bold text-slate-500">{s.teacher}</td>
+                  <td className="px-8 py-5 text-center text-xs font-bold text-slate-500">{s.circle}</td>
+                  <td className="px-8 py-5 text-center">
+                    <span className={`px-4 py-1 rounded-full text-[9px] font-black ${s.fees === 'نعم' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
                       {s.fees === 'نعم' ? 'خالص' : 'مستحق'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <td className="px-8 py-5">
+                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
                   </td>
                 </tr>
@@ -121,115 +225,6 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
           </table>
         </div>
       </div>
-
-      {/* --- بطاقة الطالب الذكية (The Smart Detail View) --- */}
-      {selectedStudent && (
-        <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} // تأكيد التموضع المطلق فوق كل شيء
-        >
-          <div className="bg-[#F8FAFC] w-full max-w-4xl h-fit max-h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
-            
-            {/* الشريط الجانبي الثابت (Header Side) */}
-            <div className="w-full md:w-80 bg-slate-900 p-8 flex flex-col items-center text-center shrink-0">
-               <div className="relative mb-6">
-                 <div className="w-24 h-24 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-[2rem] rotate-3 flex items-center justify-center text-white text-3xl font-black shadow-2xl border-2 border-white/20">
-                   {selectedStudent.name.charAt(0)}
-                 </div>
-                 <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-4 border-slate-900 flex items-center justify-center ${selectedStudent.fees === 'نعم' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                   <span className="text-white text-[10px]">{selectedStudent.fees === 'نعم' ? '✓' : '!'}</span>
-                 </div>
-               </div>
-               
-               <h2 className="text-white text-xl font-black mb-1 leading-tight px-2">{selectedStudent.name}</h2>
-               <p className="text-indigo-400 text-[10px] font-black tracking-widest uppercase mb-8 opacity-70">المعرف: {selectedStudent.id}</p>
-
-               <div className="w-full space-y-2 mt-auto">
-                 {isEditMode ? (
-                    <button onClick={handleSave} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-xs shadow-lg hover:bg-emerald-700 transition-all">حفظ التعديلات</button>
-                 ) : (
-                    <button onClick={() => setIsEditMode(true)} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all">تعديل البيانات</button>
-                 )}
-                 <button onClick={() => setSelectedStudent(null)} className="w-full bg-white/10 text-white py-3 rounded-2xl font-black text-xs hover:bg-white/20 transition-all">إغلاق الملف</button>
-                 {!isEditMode && (
-                   <button onClick={() => onDelete?.(selectedStudent)} className="w-full text-rose-500/60 hover:text-rose-500 py-2 text-[10px] font-black transition-all mt-2">حذف الطالب</button>
-                 )}
-               </div>
-            </div>
-
-            {/* الجزء الأساسي المتغير (Tabs Content) */}
-            <div className="flex-1 flex flex-col min-h-0 bg-white md:rounded-r-[2.5rem]">
-              
-              {/* شريط التبويبات (Tabs Switcher) */}
-              <div className="flex border-b border-slate-100 p-2 gap-1 bg-slate-50/50 shrink-0">
-                {[
-                  { id: 'personal', label: 'البيانات الشخصية', icon: '👤' },
-                  { id: 'academic', label: 'المسار الدراسي', icon: '🎓' },
-                  { id: 'admin', label: 'الشؤون الإدارية', icon: '📁' },
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as TabType)}
-                    className={`flex-1 py-4 px-2 rounded-2xl text-[10px] font-black transition-all flex items-center justify-center gap-2 ${
-                      activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm border border-indigo-50' : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <span>{tab.icon}</span> {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* محتوى التبويب المختار */}
-              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/20">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-bottom-2 duration-300">
-                  
-                  {activeTab === 'personal' && (
-                    <>
-                      <InfoTile label="الاسم الرباعي" value={selectedStudent.name} fieldKey="name" icon="👤" />
-                      <InfoTile label="رقم الهوية" value={selectedStudent.nationalId} fieldKey="nationalId" icon="🆔" />
-                      <InfoTile label="الجنسية" value={selectedStudent.nationality} fieldKey="nationality" icon="🌍" />
-                      <InfoTile label="رقم الجوال" value={selectedStudent.phone} fieldKey="phone" icon="📱" />
-                      <InfoTile label="تاريخ الميلاد" value={selectedStudent.dob} fieldKey="dob" type="date" icon="📅" />
-                      <InfoTile label="العمر" value={selectedStudent.age} fieldKey="age" icon="🎂" />
-                      <InfoTile label="مكان السكن" value={selectedStudent.address} fieldKey="address" icon="📍" />
-                    </>
-                  )}
-
-                  {activeTab === 'academic' && (
-                    <>
-                      <InfoTile label="المعلم" value={selectedStudent.teacher} fieldKey="teacher" icon="👳‍♂️" />
-                      <InfoTile label="اسم الحلقة" value={selectedStudent.circle} fieldKey="circle" icon="🕌" />
-                      <InfoTile label="المستوى الحالي" value={selectedStudent.level} fieldKey="level" icon="📊" />
-                      <InfoTile label="رقم الجزء" value={selectedStudent.part} fieldKey="part" icon="📖" />
-                      <InfoTile label="تاريخ الالتحاق" value={selectedStudent.regDate} fieldKey="regDate" type="date" icon="✍️" />
-                      <InfoTile label="المؤهل العلمي" value={selectedStudent.qualification} fieldKey="qualification" icon="📜" />
-                    </>
-                  )}
-
-                  {activeTab === 'admin' && (
-                    <>
-                      <InfoTile label="انتهاء الهوية" value={selectedStudent.expiryId} fieldKey="expiryId" type="date" icon="⌛" />
-                      <InfoTile label="سداد الرسوم" value={selectedStudent.fees} fieldKey="fees" icon="💰" />
-                      <InfoTile label="الفئة العمرية" value={selectedStudent.category} fieldKey="category" icon="👥" />
-                      <InfoTile label="الفترة الدراسية" value={selectedStudent.period} fieldKey="period" icon="⏰" />
-                      <InfoTile label="اكتمال الملف" value={selectedStudent.completion} fieldKey="completion" icon="✅" />
-                      <InfoTile label="الوظيفة" value={selectedStudent.job} fieldKey="job" icon="💼" />
-                    </>
-                  )}
-
-                </div>
-              </div>
-
-              {/* تذييل البطاقة (Footer) */}
-              <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-[9px] font-bold text-slate-300 shrink-0">
-                <span className="uppercase tracking-[0.2em]">Validated Document</span>
-                <span className="text-indigo-400">نور القرآن - الإدارة الذكية</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 };
