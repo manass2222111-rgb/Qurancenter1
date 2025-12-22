@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { fetchSheetData, performSheetAction, getScriptUrl, setScriptUrl } from './services/googleSheets';
 import { Student, ViewType } from './types';
 import Dashboard from './components/Dashboard';
@@ -20,28 +20,27 @@ const Icons = {
 const App: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
-  const [isInitialLoading, setIsInitialLoading] = useState(true); // تحميل أول مرة فقط
-  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false); // مزامنة خلفية
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [scriptUrl, setScriptUrlState] = useState(getScriptUrl());
 
-  const loadData = async (silent = false) => {
+  const loadData = useCallback(async () => {
     try {
-      if (!silent) setIsInitialLoading(students.length === 0);
-      setIsBackgroundSyncing(true);
+      setIsSyncing(true);
       const data = await fetchSheetData();
       setStudents(data);
     } catch (err: any) {
-      console.error(err);
+      console.error("Fetch Error:", err);
     } finally {
       setIsInitialLoading(false);
-      setIsBackgroundSyncing(false);
+      setIsSyncing(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleAction = async (student: Student, action: 'add' | 'update' | 'delete') => {
     if (!scriptUrl) {
@@ -52,17 +51,18 @@ const App: React.FC = () => {
       setIsSaving(true);
       const success = await performSheetAction(student, action);
       if (success) {
-        // تحديث البيانات في الخلفية بدون تصفير الشاشة
-        loadData(true);
+        await loadData();
         if (action === 'delete') alert("تم حذف الدارس بنجاح.");
         if (action === 'update') alert("تم تحديث البيانات بنجاح.");
         if (action === 'add') {
           alert("تم تسجيل الدارس بنجاح.");
           setActiveView('table');
         }
+      } else {
+        alert("لم يتم تنفيذ العملية، يرجى التحقق من الرابط.");
       }
     } catch (err) {
-      alert("حدث خطأ في الاتصال بالسحابة.");
+      alert("حدث خطأ تقني.");
     } finally {
       setIsSaving(false);
     }
@@ -91,8 +91,9 @@ const App: React.FC = () => {
   const totalNotifications = notifications.expiredIds.length + notifications.expiringSoonIds.length + notifications.unpaidFees.length;
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] flex overflow-hidden font-['Tajawal']">
-      <aside className="hidden lg:flex w-72 bg-[#0F172A] flex-col relative z-20">
+    <div className="min-h-screen bg-[#F1F5F9] flex overflow-hidden font-['Tajawal'] text-right" dir="rtl">
+      {/* Sidebar */}
+      <aside className="hidden lg:flex w-72 bg-[#0F172A] flex-col relative z-20 shadow-2xl">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">ن</div>
@@ -130,24 +131,25 @@ const App: React.FC = () => {
         </div>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <h2 className="text-slate-900 font-extrabold text-xl">
               {activeView === 'dashboard' ? 'لوحة المعلومات' : activeView === 'table' ? 'سجل الطلاب' : activeView === 'alerts' ? 'مركز التنبيهات' : 'إضافة طالب'}
             </h2>
-            {isBackgroundSyncing && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full animate-pulse border border-indigo-100">
-                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                <span className="text-[9px] font-black uppercase">جاري التزامن...</span>
+            {isSyncing && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></div>
+                <span className="text-[9px] font-black uppercase">مزامنة البيانات...</span>
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-6">
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase ${scriptUrl ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+             <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase ${scriptUrl ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
               <div className={`w-2 h-2 rounded-full ${scriptUrl ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-              {scriptUrl ? 'متصل' : 'ضبط الإعدادات'}
+              {scriptUrl ? 'سحابي متصل' : 'ضبط الإعدادات'}
             </div>
             
             <button onClick={() => setIsNotificationOpen(!isNotificationOpen)} className="relative text-slate-500 hover:bg-slate-100 w-10 h-10 flex items-center justify-center rounded-full transition-all">
@@ -162,10 +164,10 @@ const App: React.FC = () => {
           {isInitialLoading && students.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full">
               <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="mt-4 text-slate-400 font-bold">جاري المزامنة الأولى...</p>
+              <p className="mt-4 text-slate-400 font-bold">جاري المزامنة الأولى مع جوجل شيت...</p>
             </div>
           ) : (
-            <div className="animate-fade-up">
+            <div className="max-w-[1600px] mx-auto">
               {activeView === 'dashboard' && <Dashboard students={students} />}
               {activeView === 'table' && (
                 <StudentTable 
@@ -189,6 +191,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
+      {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6">
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden animate-fade-up">
@@ -197,15 +200,18 @@ const App: React.FC = () => {
               <p className="text-slate-400 text-xs">اربط التطبيق بالشيت للتعديل والحذف المباشر</p>
             </div>
             <div className="p-8 space-y-6">
-              <input 
-                type="text" 
-                value={scriptUrl} 
-                onChange={(e) => setScriptUrlState(e.target.value)}
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all text-xs font-mono"
-                placeholder="رابط Apps Script"
-              />
-              <button onClick={handleSaveSettings} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all">تفعيل المزامنة</button>
-              <button onClick={() => setShowSettings(false)} className="w-full text-slate-400 font-bold text-xs">إغلاق</button>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 pr-2">رابط APPS SCRIPT</label>
+                <input 
+                  type="text" 
+                  value={scriptUrl} 
+                  onChange={(e) => setScriptUrlState(e.target.value)}
+                  className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all text-xs font-mono"
+                  placeholder="https://script.google.com/macros/s/..."
+                />
+              </div>
+              <button onClick={handleSaveSettings} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all">حفظ وإعادة مزامنة</button>
+              <button onClick={() => setShowSettings(false)} className="w-full text-slate-400 font-bold text-xs">إلغاء</button>
             </div>
           </div>
         </div>
