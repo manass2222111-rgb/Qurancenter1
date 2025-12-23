@@ -14,13 +14,25 @@ const LEVEL_ORDER = ['تمهيدي', 'الأول', 'الثاني', 'الثالث
 
 const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelete }) => {
   const [globalSearch, setGlobalSearch] = useState('');
-  const [levelFilter, setLevelFilter] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // فلاتر الأعمدة
+  const [filters, setFilters] = useState({
+    level: '',
+    teacher: '',
+    circle: '',
+    category: '',
+    period: '',
+    nationality: '',
+    fees: ''
+  });
+
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState<Student | null>(null);
 
-  const dropdownOptions = useMemo(() => {
+  const options = useMemo(() => {
     const getUnique = (key: keyof Student) => 
       Array.from(new Set(students.map(s => s[key]).filter(v => v && v.trim() !== ''))).sort();
 
@@ -29,17 +41,38 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
       circles: getUnique('circle'),
       categories: getUnique('category'),
       periods: getUnique('period'),
+      nationalities: getUnique('nationality'),
     };
   }, [students]);
 
   const filteredData = useMemo(() => {
-    return students.filter(student => {
-      const searchableText = `${student.name} ${student.phone} ${student.teacher} ${student.circle} ${student.nationalId}`;
-      const matchesSearch = !globalSearch || smartMatch(searchableText, globalSearch);
-      const matchesLevel = !levelFilter || student.level === levelFilter;
-      return matchesSearch && matchesLevel;
+    return students.filter(s => {
+      const matchesSearch = !globalSearch || smartMatch(`${s.name} ${s.phone} ${s.teacher} ${s.circle} ${s.nationalId}`, globalSearch);
+      const matchesLevel = !filters.level || s.level === filters.level;
+      const matchesTeacher = !filters.teacher || s.teacher === filters.teacher;
+      const matchesCircle = !filters.circle || s.circle === filters.circle;
+      const matchesCategory = !filters.category || s.category === filters.category;
+      const matchesPeriod = !filters.period || s.period === filters.period;
+      const matchesNationality = !filters.nationality || s.nationality === filters.nationality;
+      const matchesFees = !filters.fees || s.fees === filters.fees;
+
+      return matchesSearch && matchesLevel && matchesTeacher && matchesCircle && 
+             matchesCategory && matchesPeriod && matchesNationality && matchesFees;
     });
-  }, [students, globalSearch, levelFilter]);
+  }, [students, globalSearch, filters]);
+
+  const resetFilters = () => {
+    setFilters({
+      level: '',
+      teacher: '',
+      circle: '',
+      category: '',
+      period: '',
+      nationality: '',
+      fees: ''
+    });
+    setGlobalSearch('');
+  };
 
   const handleOpenProfile = (student: Student) => {
     setSelectedStudent(student);
@@ -55,7 +88,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
     }
   };
 
-  const DataField = ({ label, value, fieldKey, icon, type = 'text', isSelect = false, options = [] }: any) => (
+  const DataField = ({ label, value, fieldKey, icon, type = 'text', isSelect = false, fieldOptions = [] }: any) => (
     <div className="bg-[#F9F9F9] p-7 rounded-2xl border border-[#EDEDED] hover:border-[#84754E]/20 transition-all shadow-sm">
       <div className="flex items-center gap-2.5 mb-2.5 text-[#AAA]">
         <span className="text-sm">{icon}</span>
@@ -69,7 +102,7 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
             className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-[#EDEDED] text-[#444]"
           >
             <option value="">اختر...</option>
-            {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+            {fieldOptions.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
           </select>
         ) : (
           type === 'date' ? (
@@ -145,9 +178,9 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
                 )}
                 {activeTab === 'academic' && (
                   <>
-                    <DataField label="اسم المحفظ" value={selectedStudent.teacher} fieldKey="teacher" isSelect options={dropdownOptions.teachers} icon="👳" />
-                    <DataField label="المستوى" value={selectedStudent.level} fieldKey="level" isSelect options={LEVEL_ORDER} icon="📈" />
-                    <DataField label="الحلقة" value={selectedStudent.circle} fieldKey="circle" isSelect options={dropdownOptions.circles} icon="🕌" />
+                    <DataField label="اسم المحفظ" value={selectedStudent.teacher} fieldKey="teacher" isSelect fieldOptions={options.teachers} icon="👳" />
+                    <DataField label="المستوى" value={selectedStudent.level} fieldKey="level" isSelect fieldOptions={LEVEL_ORDER} icon="📈" />
+                    <DataField label="الحلقة" value={selectedStudent.circle} fieldKey="circle" isSelect fieldOptions={options.circles} icon="🕌" />
                     <DataField label="الجزء الحالي" value={selectedStudent.part} fieldKey="part" icon="📖" />
                     <DataField label="تاريخ الالتحاق" value={selectedStudent.regDate} fieldKey="regDate" type="date" icon="📝" />
                   </>
@@ -156,9 +189,9 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
                   <>
                     <DataField label="رقم الهوية" value={selectedStudent.nationalId} fieldKey="nationalId" icon="🆔" />
                     <DataField label="صلاحية الهوية" value={selectedStudent.expiryId} fieldKey="expiryId" type="date" icon="🕒" />
-                    <DataField label="الفئة" value={selectedStudent.category} fieldKey="category" isSelect options={dropdownOptions.categories} icon="🔖" />
-                    <DataField label="الفترة الدراسية" value={selectedStudent.period} fieldKey="period" isSelect options={dropdownOptions.periods} icon="⏰" />
-                    <DataField label="حالة السداد" value={selectedStudent.fees} fieldKey="fees" isSelect options={['نعم', 'لا']} icon="💸" />
+                    <DataField label="الفئة" value={selectedStudent.category} fieldKey="category" isSelect fieldOptions={options.categories} icon="🔖" />
+                    <DataField label="الفترة الدراسية" value={selectedStudent.period} fieldKey="period" isSelect fieldOptions={options.periods} icon="⏰" />
+                    <DataField label="حالة السداد" value={selectedStudent.fees} fieldKey="fees" isSelect fieldOptions={['نعم', 'لا']} icon="💸" />
                   </>
                 )}
               </div>
@@ -169,22 +202,86 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row gap-6 bg-white p-8 rounded-[1.5rem] border border-[#EBEBEB] shadow-sm">
-        <div className="relative flex-1">
-          <input 
-            type="text" 
-            placeholder="البحث الذكي بالاسم، الرقم، أو اسم المحفظ..."
-            className="w-full pr-14 pl-8 py-5 bg-[#F9F9F9] rounded-2xl outline-none focus:ring-1 focus:ring-[#84754E]/10 font-bold border border-transparent focus:border-[#84754E]/10 text-[#444]"
-            value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
-          />
-          <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-6 h-6 text-[#84754E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <div className="space-y-6">
+      {/* شريط البحث والفلاتر */}
+      <div className="bg-white p-8 rounded-[2rem] border border-[#EBEBEB] shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <input 
+              type="text" 
+              placeholder="البحث الذكي (الاسم، الرقم، الجوال، المحفظ...)"
+              className="w-full pr-14 pl-8 py-4 bg-[#F9F9F9] rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#84754E]/10 font-bold border border-transparent focus:border-[#84754E]/20 text-[#444] transition-all"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+            />
+            <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-6 h-6 text-[#84754E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <button 
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`px-8 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-3 border ${showAdvancedFilters ? 'bg-[#84754E] text-white border-[#84754E]' : 'bg-white text-[#84754E] border-[#EBEBEB] hover:bg-[#F9F9F9]'}`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            {showAdvancedFilters ? 'إخفاء الفلاتر' : 'تصفية متقدمة'}
+          </button>
+          {(globalSearch || Object.values(filters).some(v => v)) && (
+            <button onClick={resetFilters} className="text-rose-500 font-black text-xs px-4 hover:underline">إعادة ضبط</button>
+          )}
         </div>
-        <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)} className="px-10 py-5 bg-white rounded-2xl border border-[#EDEDED] outline-none font-black text-[#777] text-sm cursor-pointer hover:bg-[#F9F9F9] transition-all">
-          <option value="">تصفية حسب المستوى الأكاديمي</option>
-          {LEVEL_ORDER.map(l => <option key={l} value={l}>{l}</option>)}
-        </select>
+
+        {showAdvancedFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6 border-t border-[#F5F5F5] animate-fade">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">المحفظ</label>
+              <select value={filters.teacher} onChange={e => setFilters({...filters, teacher: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                {options.teachers.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">الحلقة</label>
+              <select value={filters.circle} onChange={e => setFilters({...filters, circle: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                {options.circles.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">المستوى</label>
+              <select value={filters.level} onChange={e => setFilters({...filters, level: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                {LEVEL_ORDER.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">الفئة</label>
+              <select value={filters.category} onChange={e => setFilters({...filters, category: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                {options.categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">الجنسية</label>
+              <select value={filters.nationality} onChange={e => setFilters({...filters, nationality: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                {options.nationalities.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">الفترة</label>
+              <select value={filters.period} onChange={e => setFilters({...filters, period: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                {options.periods.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#84754E] uppercase pr-2">حالة السداد</label>
+              <select value={filters.fees} onChange={e => setFilters({...filters, fees: e.target.value})} className="filter-select w-full px-5 py-3.5 bg-[#F9F9F9] rounded-xl outline-none font-bold text-sm border border-transparent focus:bg-white focus:border-[#84754E]/20">
+                <option value="">الكل</option>
+                <option value="نعم">تم السداد</option>
+                <option value="لا">لم يسدد</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-sm border border-[#EBEBEB] overflow-hidden">
@@ -192,33 +289,46 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
           <thead className="bg-[#F9F9F9] text-[#A1A1A1] text-[11px] font-black uppercase tracking-[0.25em] border-b border-[#EDEDED]">
             <tr>
               <th className="px-10 py-6">تفاصيل الدارس</th>
-              <th className="px-10 py-6">المحفظ</th>
+              <th className="px-10 py-6">المحفظ / الحلقة</th>
               <th className="px-10 py-6">المستوى</th>
               <th className="px-10 py-6 text-center">الرسوم</th>
               <th className="px-10 py-6"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F9F9F9]">
-            {filteredData.map((s, idx) => (
-              <tr key={idx} onClick={() => handleOpenProfile(s)} className="hover:bg-[#FDFDFB] cursor-pointer transition-all group">
-                <td className="px-10 py-6">
-                  <div className="font-black text-[#444] text-base group-hover:text-[#84754E] transition-colors">{s.name}</div>
-                  <div className="text-[10px] text-[#BBB] font-bold mt-1.5 uppercase tracking-widest">كود: {s.id} | هاتف: {s.phone}</div>
-                </td>
-                <td className="px-10 py-6 text-sm font-bold text-[#777]">{s.teacher}</td>
-                <td className="px-10 py-6 text-sm font-bold text-[#777]">{s.level}</td>
-                <td className="px-10 py-6 text-center">
-                  <span className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${s.fees === 'نعم' ? 'bg-[#84754E]/5 text-[#84754E] border-[#84754E]/20' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                    {s.fees === 'نعم' ? 'خالص' : 'مطلوب'}
-                  </span>
-                </td>
-                <td className="px-10 py-6">
-                   <div className="w-10 h-10 rounded-xl bg-[#F9F9F9] flex items-center justify-center text-[#84754E] group-hover:bg-[#84754E] group-hover:text-white transition-all shadow-inner">
-                      ←
-                   </div>
+            {filteredData.length > 0 ? (
+              filteredData.map((s, idx) => (
+                <tr key={idx} onClick={() => handleOpenProfile(s)} className="hover:bg-[#FDFDFB] cursor-pointer transition-all group">
+                  <td className="px-10 py-6">
+                    <div className="font-black text-[#444] text-base group-hover:text-[#84754E] transition-colors">{s.name}</div>
+                    <div className="text-[10px] text-[#BBB] font-bold mt-1.5 uppercase tracking-widest">هاتف: {s.phone} | {s.nationality}</div>
+                  </td>
+                  <td className="px-10 py-6">
+                    <div className="text-sm font-bold text-[#777]">{s.teacher}</div>
+                    <div className="text-[10px] text-[#BBB] font-bold mt-1 uppercase">حلقة: {s.circle}</div>
+                  </td>
+                  <td className="px-10 py-6 text-sm font-bold text-[#777]">{s.level}</td>
+                  <td className="px-10 py-6 text-center">
+                    <span className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${s.fees === 'نعم' ? 'bg-[#84754E]/5 text-[#84754E] border-[#84754E]/20' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                      {s.fees === 'نعم' ? 'خالص' : 'مطلوب'}
+                    </span>
+                  </td>
+                  <td className="px-10 py-6">
+                    <div className="w-10 h-10 rounded-xl bg-[#F9F9F9] flex items-center justify-center text-[#84754E] group-hover:bg-[#84754E] group-hover:text-white transition-all shadow-inner">
+                        ←
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="px-10 py-32 text-center">
+                  <div className="text-4xl mb-4 opacity-20">🔍</div>
+                  <p className="text-[#AAA] font-black text-sm uppercase tracking-widest">لا توجد نتائج تطابق خيارات التصفية</p>
+                  <button onClick={resetFilters} className="mt-4 text-[#84754E] font-black text-xs hover:underline">إلغاء جميع الفلاتر</button>
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

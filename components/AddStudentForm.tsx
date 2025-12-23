@@ -212,7 +212,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
               <div className="flex gap-6 justify-center max-w-2xl mx-auto">
                 {['نعم', 'لا'].map(option => (
                   <button key={option} type="button" onClick={() => setFormData(p => ({ ...p, fees: option }))}
-                    className={`flex-1 py-6 rounded-2xl font-black text-xl transition-all border-2 ${formData.fees === option ? 'bg-[#84754E] text-white border-[#84754E] shadow-xl scale-[1.02]' : 'bg-[#F9F9F9] text-[#AAA] border-transparent hover:bg-[#F4F1EA]'}`}>
+                    className={`flex-1 py-6 rounded-2xl font-black text-xl transition-all border-2 ${formData.fees === option ? 'bg-[#84754E] text-white border-[#84754E] shadow-xl scale-[1.02]' : 'bg-white text-[#AAA] border-transparent hover:bg-[#F4F1EA]'}`}>
                     {option === 'نعم' ? 'تم السداد' : 'مطلوب السداد'}
                   </button>
                 ))}
