@@ -96,9 +96,9 @@ const App: React.FC = () => {
       <aside className="hidden lg:flex w-72 bg-white flex-col relative z-20 shadow-[1px_0_15px_rgba(0,0,0,0.02)] border-l border-[#EBEBEB]">
         <div className="p-10">
           <div className="flex flex-col items-center gap-4 mb-14 text-center group">
-            <div className="w-20 h-20 bg-[#84754E] rounded-full flex items-center justify-center text-white font-black text-3xl shadow-[0_8px_15px_rgba(132,117,78,0.25)] transition-transform group-hover:scale-105">ن</div>
+            <div className="w-20 h-20 bg-[#84754E] rounded-full flex items-center justify-center text-white font-black text-3xl shadow-[0_8px_15px_rgba(132,117,78,0.25)] transition-transform group-hover:scale-105">أ</div>
             <div>
-              <h1 className="text-[#84754E] font-black text-xl leading-tight">نور القرآن</h1>
+              <h1 className="text-[#84754E] font-black text-xl leading-tight">أبو بكر الصديق</h1>
               <span className="text-[#A1A1A1] text-[10px] font-bold uppercase tracking-[0.2em] mt-1.5 block">المركز الإداري الرقمي</span>
             </div>
           </div>
