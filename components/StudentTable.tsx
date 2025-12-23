@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Student } from '../types';
 import { smartMatch } from '../utils/arabicSearch';
+import * as XLSX from 'xlsx';
 
 interface StudentTableProps {
   students: Student[];
@@ -60,29 +61,38 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
     });
   }, [students, globalSearch, filters]);
 
-  // وظيفة تصدير البيانات إلى Excel (CSV)
+  // وظيفة تصدير البيانات إلى Excel الحقيقي (.xlsx)
   const handleExportExcel = () => {
     if (filteredData.length === 0) return;
 
-    const headers = [
-      "م", "اسم الدارس", "الجنسية", "تاريخ الميلاد", "رقم الهاتف", "العمر", 
-      "المستوى", "الحلقة", "المحفظ", "الفئة", "الفترة", "رقم الهوية", "انتهاء الهوية", "الرسوم"
-    ];
+    // تحويل البيانات لشكل متوافق مع إكسل
+    const dataToExport = filteredData.map(s => ({
+      "م": s.id,
+      "اسم الدارس": s.name,
+      "الجنسية": s.nationality,
+      "تاريخ الميلاد": s.dob,
+      "رقم الهاتف": s.phone,
+      "العمر": s.age,
+      "المستوى": s.level,
+      "الحلقة": s.circle,
+      "المحفظ": s.teacher,
+      "الفئة": s.category,
+      "الفترة": s.period,
+      "رقم الهوية": s.nationalId,
+      "انتهاء الهوية": s.expiryId,
+      "حالة السداد": s.fees === 'نعم' ? 'خالص' : 'مطلوب'
+    }));
 
-    const rows = filteredData.map(s => [
-      s.id, s.name, s.nationality, s.dob, s.phone, s.age, 
-      s.level, s.circle, s.teacher, s.category, s.period, s.nationalId, s.expiryId, s.fees
-    ]);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "الدارسين المفلترين");
 
-    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `سجل_الدارسين_أبو_بكر_الصديق_${new Date().toLocaleDateString('ar-EG')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ضبط اتجاه الصفحة ليكون من اليمين لليسار في ملف إكسل
+    if (!worksheet['!views']) worksheet['!views'] = [];
+    worksheet['!views'].push({ RTL: true });
+
+    // تصدير وتحميل الملف
+    XLSX.writeFile(workbook, `سجل_الدارسين_أبو_بكر_الصديق_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
   };
 
   const resetFilters = () => {

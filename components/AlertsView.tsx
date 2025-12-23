@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Student } from '../types';
+import * as XLSX from 'xlsx';
 
 interface AlertsViewProps {
   notifications: {
@@ -31,28 +32,29 @@ const AlertsView: React.FC<AlertsViewProps> = ({ notifications }) => {
     return matchesFilter && matchesSearch;
   });
 
-  // وظيفة تصدير كشف المتابعة
+  // وظيفة تصدير كشف المتابعة إلى ملف Excel حقيقي
   const handleExportAlerts = () => {
     if (filteredAlerts.length === 0) return;
 
-    const headers = [
-      "اسم الدارس", "نوع التنبيه", "المحفظ", "رقم الجوال", "التفاصيل (تاريخ الانتهاء/الرسوم)"
-    ];
+    // تجهيز البيانات للأعمدة
+    const dataToExport = filteredAlerts.map(a => ({
+      "اسم الدارس": a.name,
+      "نوع التنبيه": a.label,
+      "المحفظ المسئول": a.teacher,
+      "رقم الجوال": a.phone,
+      "التفاصيل (تاريخ/حالة)": a.alertType === 'fees' ? 'مطلوب السداد' : a.expiryId
+    }));
 
-    const rows = filteredAlerts.map(a => [
-      a.name, a.label, a.teacher, a.phone, 
-      a.alertType === 'fees' ? 'مطلوب السداد' : a.expiryId
-    ]);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "كشف التنبيهات المفلترة");
 
-    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `كشف_متابعة_التنبيهات_${new Date().toLocaleDateString('ar-EG')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ضبط اتجاه الصفحة ليكون من اليمين لليسار في ملف إكسل
+    if (!worksheet['!views']) worksheet['!views'] = [];
+    worksheet['!views'].push({ RTL: true });
+
+    // تصدير وتحميل الملف
+    XLSX.writeFile(workbook, `كشف_متابعة_التنبيهات_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
   };
 
   return (
@@ -99,7 +101,7 @@ const AlertsView: React.FC<AlertsViewProps> = ({ notifications }) => {
           className="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-indigo-600 transition-all flex items-center justify-center gap-3"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          تصدير كشف المتابعة
+          تصدير كشف المتابعة (Excel)
         </button>
       </div>
 

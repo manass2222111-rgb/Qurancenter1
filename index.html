@@ -46,7 +46,6 @@
             transform: translateY(-1px);
         }
         
-        /* الإصلاح النهائي لمشكلة التاريخ */
         .date-input-wrapper {
             direction: ltr !important;
             display: flex;
@@ -76,7 +75,6 @@
             cursor: pointer;
         }
 
-        /* منع المتصفح من قلب الحروف (موي/رهش) */
         input[type="date"]::-webkit-datetime-edit {
             display: flex !important;
             direction: ltr !important;
@@ -102,7 +100,6 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #D1D1D1; border-radius: 10px; }
         
-        /* تجميل الفلاتر */
         .filter-select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2384754E'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -119,6 +116,7 @@
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom",
     "lucide-react": "https://esm.sh/lucide-react@0.454.0?external=react",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
