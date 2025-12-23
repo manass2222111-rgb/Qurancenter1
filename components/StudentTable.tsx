@@ -73,13 +73,12 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
           </select>
         ) : (
           type === 'date' ? (
-            <div className="date-container-fix bg-white rounded-xl border border-[#EDEDED] overflow-hidden">
+            <div className="date-input-wrapper bg-white border border-[#EDEDED]">
               <input 
                 type="date"
                 lang="en-GB"
                 value={(editFormData as any)?.[fieldKey] || ''}
                 onChange={e => setEditFormData({ ...editFormData!, [fieldKey]: e.target.value })}
-                className="w-full px-4 py-3 text-sm font-bold outline-none bg-transparent text-[#444]"
               />
             </div>
           ) : (

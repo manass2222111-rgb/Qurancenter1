@@ -46,36 +46,68 @@
             transform: translateY(-1px);
         }
         
-        /* الإصلاح النهائي: عزل الحقل تماماً عن الـ RTL */
-        .date-container-fix {
-            direction: ltr !important; /* إجبار الحاوية على العمل من اليسار لليمين */
+        /* الحل الفني النهائي والجذري لمشكلة "موي/رهش/قنس" */
+        /* 1. إجبار الحاوية على اتجاه اليسار للأرقام */
+        .date-input-wrapper {
+            direction: ltr !important;
             display: flex;
-            justify-content: flex-end; /* ولكن دفع المحتوى لليمين ليتناسب مع التصميم */
+            align-items: center;
+            background-color: #F9F9F9;
+            border-radius: 1rem;
+            padding: 0 15px;
         }
 
         input[type="date"] {
+            -webkit-appearance: none;
+            appearance: none;
             direction: ltr !important;
-            text-align: right !important;
-            font-family: 'Courier New', Courier, monospace !important; /* خط أرقام واضح */
-            min-height: 3.5rem;
-            text-transform: uppercase;
+            text-align: left !important;
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            height: 3.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #444;
         }
 
-        /* استهداف القناع الداخلي للمتصفح لمنع قلب الحروف (يوم -> موي) */
-        input[type="date"]::-webkit-datetime-edit,
-        input[type="date"]::-webkit-datetime-edit-fields-wrapper,
-        input[type="date"]::-webkit-datetime-edit-year-field,
-        input[type="date"]::-webkit-datetime-edit-month-field,
+        /* 2. استهداف الأجزاء الداخلية للمتصفح (Shadow DOM) وفرض dd/mm/yyyy */
+        input[type="date"]::-webkit-datetime-edit {
+            display: flex !important;
+            direction: ltr !important;
+        }
+
+        /* منع المتصفح من قلب ترتيب الحقول */
+        input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+            display: flex !important;
+            flex-direction: row !important;
+        }
+
+        /* إجبار كل قطعة (يوم، شهر، سنة) على البقاء بنظام الأرقام اللاتينية */
         input[type="date"]::-webkit-datetime-edit-day-field,
+        input[type="date"]::-webkit-datetime-edit-month-field,
+        input[type="date"]::-webkit-datetime-edit-year-field,
         input[type="date"]::-webkit-datetime-edit-text {
+            color: #444 !important;
             direction: ltr !important;
-            unicode-bidi: bidi-override !important; /* منع المتصفح من قلب الاتجاه داخلياً */
+            display: inline-block !important;
         }
 
+        /* تخصيص شكل الفاصل / */
+        input[type="date"]::-webkit-datetime-edit-text {
+            padding: 0 4px;
+            color: #84754E !important;
+            font-weight: 900;
+        }
+
+        /* أيقونة التقويم */
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
             filter: sepia(100%) saturate(200%) hue-rotate(10deg);
-            margin-left: 10px;
+            opacity: 0.6;
+            margin-left: 5px;
         }
 
         @keyframes fadeIn {
