@@ -46,26 +46,36 @@
             transform: translateY(-1px);
         }
         
-        /* الحل الفني النهائي لإزالة "موي/رهش" واستبدالها بالأرقام */
+        /* الإصلاح النهائي: عزل الحقل تماماً عن الـ RTL */
+        .date-container-fix {
+            direction: ltr !important; /* إجبار الحاوية على العمل من اليسار لليمين */
+            display: flex;
+            justify-content: flex-end; /* ولكن دفع المحتوى لليمين ليتناسب مع التصميم */
+        }
+
         input[type="date"] {
-            direction: ltr !important; /* إجبار الترتيب الرقمي الطبيعي */
-            text-align: left !important; /* لضمان ظهور dd/mm/yyyy بشكل سليم */
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            font-family: sans-serif !important; /* لضمان وضوح الأرقام الإنجليزية */
+            direction: ltr !important;
+            text-align: right !important;
+            font-family: 'Courier New', Courier, monospace !important; /* خط أرقام واضح */
+            min-height: 3.5rem;
             text-transform: uppercase;
         }
 
-        /* تنسيق أيقونة التقويم */
+        /* استهداف القناع الداخلي للمتصفح لمنع قلب الحروف (يوم -> موي) */
+        input[type="date"]::-webkit-datetime-edit,
+        input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+        input[type="date"]::-webkit-datetime-edit-year-field,
+        input[type="date"]::-webkit-datetime-edit-month-field,
+        input[type="date"]::-webkit-datetime-edit-day-field,
+        input[type="date"]::-webkit-datetime-edit-text {
+            direction: ltr !important;
+            unicode-bidi: bidi-override !important; /* منع المتصفح من قلب الاتجاه داخلياً */
+        }
+
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
             filter: sepia(100%) saturate(200%) hue-rotate(10deg);
-        }
-
-        /* منع المتصفح من التلاعب بالقناع الداخلي في وضع RTL */
-        input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-            display: flex !important;
-            flex-direction: row !important;
+            margin-left: 10px;
         }
 
         @keyframes fadeIn {

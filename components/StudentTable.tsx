@@ -72,13 +72,24 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
             {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
           </select>
         ) : (
-          <input 
-            type={type}
-            lang={type === 'date' ? 'en-GB' : undefined}
-            value={(editFormData as any)?.[fieldKey] || ''}
-            onChange={e => setEditFormData({ ...editFormData!, [fieldKey]: e.target.value })}
-            className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-[#EDEDED] text-[#444]"
-          />
+          type === 'date' ? (
+            <div className="date-container-fix bg-white rounded-xl border border-[#EDEDED] overflow-hidden">
+              <input 
+                type="date"
+                lang="en-GB"
+                value={(editFormData as any)?.[fieldKey] || ''}
+                onChange={e => setEditFormData({ ...editFormData!, [fieldKey]: e.target.value })}
+                className="w-full px-4 py-3 text-sm font-bold outline-none bg-transparent text-[#444]"
+              />
+            </div>
+          ) : (
+            <input 
+              type={type}
+              value={(editFormData as any)?.[fieldKey] || ''}
+              onChange={e => setEditFormData({ ...editFormData!, [fieldKey]: e.target.value })}
+              className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-[#EDEDED] text-[#444]"
+            />
+          )
         )
       ) : (
         <div className="text-base font-black text-[#444]">{value || 'غير محدد'}</div>

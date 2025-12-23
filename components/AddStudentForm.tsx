@@ -160,14 +160,16 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd, onCancel, studen
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-3">
                 <label className="text-[12px] font-black text-[#84754E] uppercase pr-1 tracking-[0.2em]">تاريخ الميلاد</label>
-                <input 
-                  name="dob" 
-                  type="date" 
-                  lang="en-GB" 
-                  value={formData.dob || ''} 
-                  onChange={handleChange} 
-                  className="w-full px-5 py-5 bg-[#F9F9F9] rounded-2xl outline-none font-bold" 
-                />
+                <div className="date-container-fix bg-[#F9F9F9] rounded-2xl overflow-hidden">
+                  <input 
+                    name="dob" 
+                    type="date" 
+                    lang="en-GB" 
+                    value={formData.dob || ''} 
+                    onChange={handleChange} 
+                    className="w-full px-5 py-5 bg-transparent outline-none font-bold" 
+                  />
+                </div>
               </div>
               <div className="space-y-3">
                 <label className="text-[12px] font-black text-[#84754E] uppercase pr-1 tracking-[0.2em]">العمر التلقائي</label>
