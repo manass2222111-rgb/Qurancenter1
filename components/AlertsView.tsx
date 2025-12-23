@@ -31,6 +31,30 @@ const AlertsView: React.FC<AlertsViewProps> = ({ notifications }) => {
     return matchesFilter && matchesSearch;
   });
 
+  // وظيفة تصدير كشف المتابعة
+  const handleExportAlerts = () => {
+    if (filteredAlerts.length === 0) return;
+
+    const headers = [
+      "اسم الدارس", "نوع التنبيه", "المحفظ", "رقم الجوال", "التفاصيل (تاريخ الانتهاء/الرسوم)"
+    ];
+
+    const rows = filteredAlerts.map(a => [
+      a.name, a.label, a.teacher, a.phone, 
+      a.alertType === 'fees' ? 'مطلوب السداد' : a.expiryId
+    ]);
+
+    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `كشف_متابعة_التنبيهات_${new Date().toLocaleDateString('ar-EG')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header & Stats */}
@@ -70,7 +94,11 @@ const AlertsView: React.FC<AlertsViewProps> = ({ notifications }) => {
           />
           <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
-        <button className="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-indigo-600 transition-all">
+        <button 
+          onClick={handleExportAlerts}
+          className="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-indigo-600 transition-all flex items-center justify-center gap-3"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           تصدير كشف المتابعة
         </button>
       </div>

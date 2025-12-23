@@ -16,7 +16,6 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
   const [globalSearch, setGlobalSearch] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
-  // فلاتر الأعمدة
   const [filters, setFilters] = useState({
     level: '',
     teacher: '',
@@ -61,15 +60,34 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
     });
   }, [students, globalSearch, filters]);
 
+  // وظيفة تصدير البيانات إلى Excel (CSV)
+  const handleExportExcel = () => {
+    if (filteredData.length === 0) return;
+
+    const headers = [
+      "م", "اسم الدارس", "الجنسية", "تاريخ الميلاد", "رقم الهاتف", "العمر", 
+      "المستوى", "الحلقة", "المحفظ", "الفئة", "الفترة", "رقم الهوية", "انتهاء الهوية", "الرسوم"
+    ];
+
+    const rows = filteredData.map(s => [
+      s.id, s.name, s.nationality, s.dob, s.phone, s.age, 
+      s.level, s.circle, s.teacher, s.category, s.period, s.nationalId, s.expiryId, s.fees
+    ]);
+
+    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `سجل_الدارسين_أبو_بكر_الصديق_${new Date().toLocaleDateString('ar-EG')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const resetFilters = () => {
     setFilters({
-      level: '',
-      teacher: '',
-      circle: '',
-      category: '',
-      period: '',
-      nationality: '',
-      fees: ''
+      level: '', teacher: '', circle: '', category: '', period: '', nationality: '', fees: ''
     });
     setGlobalSearch('');
   };
@@ -223,6 +241,15 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, onUpdate, onDelet
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
             {showAdvancedFilters ? 'إخفاء الفلاتر' : 'تصفية متقدمة'}
           </button>
+          
+          <button 
+            onClick={handleExportExcel}
+            className="px-8 py-4 bg-[#84754E]/5 text-[#84754E] border border-[#84754E]/20 rounded-2xl font-black text-sm hover:bg-[#84754E] hover:text-white transition-all flex items-center gap-3"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            تصدير (Excel)
+          </button>
+
           {(globalSearch || Object.values(filters).some(v => v)) && (
             <button onClick={resetFilters} className="text-rose-500 font-black text-xs px-4 hover:underline">إعادة ضبط</button>
           )}
