@@ -5,6 +5,7 @@ import {
   AreaChart, Area, PieChart, Pie, Cell 
 } from 'recharts';
 import { Student, ViewType } from '../types';
+import { normalizeArabic } from '../utils/arabicSearch';
 
 interface DashboardProps {
   students: Student[];
@@ -12,7 +13,13 @@ interface DashboardProps {
 }
 
 const LEVEL_ORDER = ['تمهيدي', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس'];
-const ARAB_COUNTRIES = ['سعودي', 'مصري', 'أردني', 'سوري', 'يمني', 'سوداني', 'فلسطيني', 'مغربي', 'جزائري', 'تونس', 'عمان', 'كويت', 'قطر', 'إمارات', 'بحرين', 'لبنان', 'عراق', 'ليبيا', 'موريتانيا', 'صومال', 'جيبوتي', 'جزر القمر'];
+
+// قائمة جذور الدول العربية للتعرف الذكي
+const ARAB_ROOTS = [
+  'سعود', 'مصر', 'اردن', 'سوريا', 'يمن', 'سودان', 'فلسطين', 'مغرب', 
+  'جزائر', 'تونس', 'عمان', 'كويت', 'قطر', 'امارات', 'بحرين', 'لبنان', 
+  'عراق', 'ليبيا', 'موريتانيا', 'صومال', 'جيبوت', 'جزر القمر'
+];
 
 type ChartDimension = 'level' | 'teacher' | 'category' | 'arabicity';
 
@@ -31,6 +38,13 @@ const Dashboard: React.FC<DashboardProps> = ({ students, onNavigate }) => {
 
     const paidStudents = students.filter(s => s.fees === 'نعم');
 
+    // منطق التحقق الذكي من العروبة
+    const isArab = (nationality: string) => {
+      if (!nationality) return false;
+      const normalized = normalizeArabic(nationality);
+      return ARAB_ROOTS.some(root => normalized.includes(normalizeArabic(root)));
+    };
+
     // بيانات الرسوم البيانية
     const getChartData = () => {
       if (activeChart === 'level') {
@@ -46,7 +60,6 @@ const Dashboard: React.FC<DashboardProps> = ({ students, onNavigate }) => {
         return Object.entries(map).map(([name, count]) => ({ name, count: count as number }));
       }
       if (activeChart === 'arabicity') {
-        const isArab = (n: string) => ARAB_COUNTRIES.some(c => n.includes(c));
         const arabCount = students.filter(s => isArab(s.nationality)).length;
         return [
           { name: 'طلاب عرب', count: arabCount },
@@ -211,6 +224,7 @@ const Dashboard: React.FC<DashboardProps> = ({ students, onNavigate }) => {
                   outerRadius={180} 
                   paddingAngle={8} 
                   dataKey="count"
+                  label={({ name, count }) => `${name}: ${count}`}
                 >
                   {stats.chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? '#84754E' : '#EADBC8'} stroke="none" />
