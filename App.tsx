@@ -166,7 +166,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <div className="max-w-[1500px] mx-auto animate-fade">
-              {activeView === 'dashboard' && <Dashboard students={students} />}
+              {activeView === 'dashboard' && <Dashboard students={students} onNavigate={setActiveView} />}
               {activeView === 'table' && <StudentTable students={students} onUpdate={(s) => handleAction(s, 'update')} onDelete={(s) => handleAction(s, 'delete')} />}
               {activeView === 'alerts' && <AlertsView notifications={notifications} />}
               {activeView === 'add' && <AddStudentForm onAdd={(s) => handleAction(s, 'add')} onCancel={() => setActiveView('table')} studentsCount={students.length} students={students} isSaving={isSaving} />}
